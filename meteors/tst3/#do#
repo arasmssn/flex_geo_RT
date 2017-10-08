@@ -1,0 +1,216 @@
+# say the maximum extent of the meteor's plume is set to 4000mm diameter.
+# then increase the radius of the ray generator by 2000mm.
+
+# src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 > d=infty
+
+deflect="| tran_ray -r 2.5e-4 2.5e-4 0 "
+deflect=""
+
+# src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 -o 150000000 $deflect > d=150km
+
+deflect="| tran_ray -r 5e-4 5e-4 0 "
+deflect=""
+
+src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 -o 120000000 $deflect > d=120km
+
+deflect="| tran_ray -r 7.5e-4 7.5e-4 0 "
+deflect=""
+
+src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 -o 100000000 $deflect > d=100km
+
+deflect="| tran_ray -r 10e-4 10e-4 0 "
+deflect=""
+
+src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 -o  80000000 $deflect > d=80km
+
+for dd in 0 500 1000 2000 4000
+do
+    for input in d=infty d=150km d=120km d=100km d=80km
+    do
+	
+	cat $input | spatial_diffuser -d $dd | diffuser -k -s 0.67 | lsst_mirrors.perl -m 1008 -b r -doparts BTC | plane_collapse -c 0 0 1 0 > rays_${input}_d$dd
+	cat rays_${input}_d${dd} | print_rays | niceplot.perl -c "finite sources" -c "1) "${input} -c "2) seeing=0.67\"" -c "3) plasma disk="${dd}"mm" > psf_${input}_d${dd}.qdp
+
+    done
+done
+
+for sd in 0 294 589 1177 2355
+do
+    for input in d=infty d=150km d=120km d=100km d=80km
+    do
+	
+	cat $input | spatial_diffuser -s $sd | diffuser -k -s 0.67 | lsst_mirrors.perl -m 1008 -b r -doparts BTC | plane_collapse -c 0 0 1 0 > rays_${input}_s$sd
+	cat rays_${input}_s${sd} | print_rays | niceplot.perl -c "finite sources" -c "1) "${input} -c "2) seeing=0.67\"" -c "3) plasma fwhm="${sd}"mm" > psf_${input}_s${sd}.qdp
+
+    done
+done
+
+# this part here will make up density & cumulative distributions
+# that show changes as a function of meteor disk diameter (in mm)
+
+for input in d=infty d=150km d=120km d=100km d=80km
+do
+    rm oneDim_${input}.hist
+    for dd in 0 500 1000 2000 4000
+    do
+	cat rays_${input}_d${dd} | print_rays | histo 8 -1 1 200 > t
+	cat t | awk '{print}END{print "no no"}' >> oneDim_${input}.hist
+	cat t | dist_lvls.perl -c 3 > /dev/null
+	mv cumdist.qdp oneDim_${input}_d${dd}.cumdist
+    done
+
+    for sd in 0 294 589 1177 2355
+    do
+	cat rays_${input}_s${sd} | print_rays | histo 8 -1 1 200 > t
+	cat t | awk '{print}END{print "no no"}' >> oneDim_${input}.hist
+	cat t | dist_lvls.perl -c 3 > /dev/null
+	mv cumdist.qdp oneDim_${input}_s${sd}.cumdist
+    done
+
+    paste oneDim_${input}_d{0,500,1000,2000,4000}.cumdist | awk '{printf "%s",$1;for (i=4;i<=NF;i+=2){printf " %s",($i-$2);}printf "\n"}' > oneDim_${input}_d_comparedistort.cumdist
+    paste oneDim_${input}_d{0,500,1000,2000,4000}.cumdist | awk '{printf "%s",$1;for (i=2;i<=NF;i+=2){printf " %s",$i;}printf "\n"}' > oneDim_${input}_d_compare.cumdist
+
+    paste oneDim_${input}_s{0,294,589,1177,2355}.cumdist | awk '{printf "%s",$1;for (i=4;i<=NF;i+=2){printf " %s",($i-$2);}printf "\n"}' > oneDim_${input}_s_comparedistort.cumdist
+    paste oneDim_${input}_s{0,294,589,1177,2355}.cumdist | awk '{printf "%s",$1;for (i=2;i<=NF;i+=2){printf " %s",$i;}printf "\n"}' > oneDim_${input}_s_compare.cumdist
+
+done
+
+# now paste these together into an image. 1x1mm per condition, 5x5 conditions
+# conditions are distance and extent of disk
+
+output=altitude_vs_extent_d.fits
+rm $output
+d="d=infty"
+row=-4
+f="rays_${d}_d0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d500";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d1000";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d2000";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d4000";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=150km"
+row=-2
+f="rays_${d}_d0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d500";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d1000";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d2000";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d4000";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=120km"
+row=0
+f="rays_${d}_d0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d500";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d1000";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d2000";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d4000";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=100km"
+row=2
+f="rays_${d}_d0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d500";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d1000";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d2000";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d4000";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=80km"
+row=4
+f="rays_${d}_d0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d500";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d1000";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d2000";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_d4000";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+output=altitude_vs_extent_s.fits
+rm $output
+d="d=infty"
+row=-4
+f="rays_${d}_s0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s294";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s589";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s1177";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s2355";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=150km"
+row=-2
+f="rays_${d}_s0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s294";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s589";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s1177";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s2355";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=120km"
+row=0
+f="rays_${d}_s0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s294";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s589";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s1177";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s2355";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=100km"
+row=2
+f="rays_${d}_s0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s294";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s589";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s1177";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s2355";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+d="d=80km"
+row=4
+f="rays_${d}_s0";col=4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s294";col=2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s589";col=0
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s1177";col=-2
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+f="rays_${d}_s2355";col=-4
+cat $f | tran_ray -T -t $col $row 0 -- | image -d 1000 -l 10 -o $output
+
+
+

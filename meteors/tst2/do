@@ -1,0 +1,21 @@
+i=0
+
+while true
+do
+    deflect=""
+    src_ray  -b 5330.09708737864 7107 2 -f 0.000277262362052392 -r 7000 -t 15 -s 0 0 -o  80000000 $deflect > d=80km
+    
+    for dd in 0 
+    do
+	for input in d=80km
+	do
+	    ((i++))
+	    cat $input | lsst_mirrors.perl -m 1008 -b r -doparts BTC | plane_collapse -c 0 0 1 0 > rays_${input}_d$dd
+	    cat rays_${input}_d$dd | image -d 200 -l 2 -o finite_source_noseeing_80km.fits
+	    cat rays_${input}_d$dd >> rays_${input}_d${dd}_all
+	    echo $i >> progress
+	    . prog
+	done
+    done
+
+done

@@ -1,0 +1,1 @@
+cat progress | awk '{print 19-2.5*log($1/0.4)/log(10)}'

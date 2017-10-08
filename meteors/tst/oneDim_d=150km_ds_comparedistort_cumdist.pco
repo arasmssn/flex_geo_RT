@@ -1,0 +1,34 @@
+SKIP SING
+FONT Rom
+LWIDTH   3.
+TIME OFF
+LAB  10 VIE 0.649999976 0.860000014 " "
+LAB  11 COL 2 LS 2 JUS Lef
+LAB  11 VIE 0.649999976 0.829999983 " d=500mm vs. 0mm"
+LAB  12 COL 4 LS 3 JUS Lef
+LAB  12 VIE 0.649999976 0.800000012 " d=1000mm vs. 0mm"
+LAB  13 COL 6 LS 4 JUS Lef
+LAB  13 VIE 0.649999976 0.769999981 " d=2000mm vs. 0mm"
+LAB  14 COL 8 LS 5 JUS Lef
+LAB  14 VIE 0.649999976 0.74000001 " d=4000mm vs. 0mm"
+LAB  15 LIN 0 7.00000003E-2 JUS Lef
+LAB  15 VIE 0.699999988 0.699999988 " disk"
+LAB  16 LIN 0 7.00000003E-2 LS 2 JUS Lef
+LAB  16 VIE 0.699999988 0.670000017 " Gaussian"
+COL 2 ON 1
+COL 4 ON 2
+COL 6 ON 3
+COL 8 ON 4
+COL 2 ON 5
+COL 4 ON 6
+COL 6 ON 7
+LS    2 ON   5
+LS    2 ON   6
+LS    2 ON   7
+LS    2 ON   8
+LOC  0 0 1 1
+LAB  F  oneDim_d=150km_ds_comparedistort.cumdist
+LAB  X  coordinate perpendicular to meteor (X) [mm]
+LAB  Y  cumulative distribution difference ( \gD fract. < X )
+R    Y   -5.32627925E-2 5.31564951E-2
+R    X   -1.04474998 1.04474998
